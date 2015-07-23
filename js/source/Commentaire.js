@@ -10,20 +10,19 @@ class GroupForm {
   }
   // Vérifie que le regex est conforme
   _checkValid(regex, value) {
-    console.log('coucou');
     return new Promise((resolve, reject) => {
       let correct = false;
       if (regex.rg.test(value)) {
-        correct = !(regex.type === 'error');
+        correct = (regex.type === 'valid');
       } else {
         correct = (regex.type === 'error');
       }
 
-      if (correct) {
-        resolve(`regex ${regex.toString()} valide`);
-      } else {
-        reject({ regex: regex.rg.toString(), msg: regex.msg || 'ouat' });
-      }
+      resolve({
+        regex: regex.rg.toString() || '',
+        msg: regex.msg || '',
+        valid: correct
+      });
     });
   }
   _setField(name, obj) {
@@ -38,31 +37,30 @@ class GroupForm {
 
   // Parse tous les Regex
   _checkAllRegex(name) {
-    console.log('name~', name);
+    const that = this;
+    // const currField = this._getField(name);
     return new Promise((resolve, reject) => {
-      console.log('name~2', name, this._fields);
-      const currField = this._getField(name);
+      const currField = that._getField(name);
+
       // Aucune vérification à faire
       if (!currField || typeof currField.regex === 'undefined' || !currField.regex.length) {
         resolve();
       }
       // Vérifie les retours
-      Promise.all(currField.regex.map(test => {
-        this._checkValid.call(this, test);
+      Promise.all(currField.regex.map(regex => {
+        return that._checkValid.call(that, regex, currField.value);
       }))
       // Tout est ok
       .then(resp => {
-        console.log('_checkAllRegex:then', resp);
         resolve({
-          name,
+          name: name,
           valid: true,
           data: resp
         });
       }) // En erreur
       .catch(err => {
-        console.log('_checkAllRegex:err', err);
         reject({
-          name,
+          name: name,
           valid: false,
           data: [err]
         });
@@ -70,33 +68,34 @@ class GroupForm {
     });
   }
 
-  _checkAllRegexMultipleFields(fields) {
+  _checkAllRegexMultipleFields(fields, callBack = () => {}) {
     Promise.all(fields.map(test => {
-      this._checkAllRegex.call(this, test);
+      return this._checkAllRegex.call(this, test);
     }))
     // Tout est ok
     .then(resp => {
-      console.log('_checkAllRegexMultipleFields:Then', resp);
-      if (resp.valid) {
-        this._fieldValidated(name, resp.data);
-        this._checkForm(name);
-      } else {
-        this._fieldUnvalidated(name, resp.data);
-        this.onUnvalid();
-        return false;
-      }
+      // Parse tous les champs
+      resp.map(field => {
+        const nonValids = field.data.filter(retour => { return !retour.valid; });
+        if (nonValids.length) {
+          this._fieldUnvalidated(field.name, nonValids);
+          this.onUnvalid();
+        } else {
+          this._fieldValidated(field.name);
+          callBack();
+        }
+      });
     }).catch(err => {
-      console.log('_checkAllRegexMultipleFields:Err', err);
+      Error(err);
     });
   }
 
   _fieldValidated(name) {
     const currField = this._getField(name);
     currField.valid = true;
-    currField.onToggleValid.call(this, this._getField(name));
+    currField.onToggleValid.call(this, currField);
   }
   _fieldUnvalidated(name, errors) {
-    console.log('_fieldUnvalidated');
     this._getField(name).onToggleUnValid.call(this, this._getField(name), errors);
   }
   // Construction des fields en Array
@@ -111,36 +110,32 @@ class GroupForm {
   }
 
   // Vérifie l'état du formulaire
-  _checkForm() {
+  _checkForm(_force = true) {
+    if (!_force) {
+      // Tous leq champs prérequis sont correct
+      if (this._getFields().every(field => field.required && field.valid)) {
+        this.onValid.call(this, null);
+        return true;
+      }
+    }
     // Execution des vérifications asynchrones
     Promise.all(this._getFields().map(this._checkAllRegex))
      // Tout est ok
     .then(resp => {
-      console.log('_checkForm:GG', resp);
       this.onValid.call(this, resp);
+      return true;
     }) // En erreur
     .catch(err => {
-      console.log('_checkForm:KO', err);
       this.onUnvalid.call(this, err);
+      return false;
     });
   }
   _onFieldUpdated(event) {
     const newVal = $(event.currentTarget).val();
     // On update la valeur
     this._getField(event.data.name).value = newVal;
-
-    this._checkAllRegexMultipleFields([event.data.name]).then(resp => {
-      console.log('_onFieldUpdated:Then', resp);
-      if (resp.valid) {
-        this._fieldValidated(name, resp.data);
-        // this._checkForm(name);
-      } else {
-        this._fieldUnvalidated(name, resp.data);
-        this.onUnvalid();
-        return false;
-      }
-    }).catch(err => {
-      console.log('_onFieldUpdated:Err', err);
+    this._checkAllRegexMultipleFields([event.data.name], () => {
+      this._checkForm(false);
     });
   }
   _buildField(field) {
@@ -152,7 +147,7 @@ class GroupForm {
   // Construction dynamique
   _build(fields) {
     if (!fields.length) {
-      throw Error('Aucun champ défini');
+      Error('Field undefined');
     }
     fields.map(field => {
       this._setField(field.name, field);
@@ -166,11 +161,12 @@ class GroupForm {
 }
 
 function fieldUnvalid(data, erreurs) {
-  console.log('fieldUnvalid', erreurs);
-  data.selector.addClass('sign-up-error').
-    next('.input-error').html(erreurs.map(erreur => {
-      return `<div>${erreur.msg}</div>`;
-    }).join(''));
+  console.table(erreurs);
+  const domToAdd = erreurs.map(erreur => {
+    return `<div>${erreur.msg}</div>`;
+  }).join('');
+  data.selector.addClass('sign-up-error')
+    .next('.input-error').html(domToAdd);
 }
 
 function fieldValid(data) {
@@ -187,7 +183,7 @@ const registerForm = new GroupForm({
       msg: 'Non numérique',
       type: 'error'
     }, {
-      rg: /\g/,
+      rg: /\d/,
       msg: 'Pas d\'espace',
       type: 'error'
     }],
@@ -199,7 +195,8 @@ const registerForm = new GroupForm({
     required: true,
     regex: [{
       rg: /\d/,
-      type: 'valid'
+      type: 'valid',
+      msg: 'Incorrect'
     }],
     onToggleUnValid: fieldUnvalid,
     onToggleValid: fieldValid
@@ -209,7 +206,8 @@ const registerForm = new GroupForm({
     required: true,
     regex: [{
       rg: /\d/,
-      type: 'valid'
+      type: 'valid',
+      msg: 'Incorrect'
     }],
     onToggleUnValid: fieldUnvalid,
     onToggleValid: fieldValid
@@ -220,6 +218,6 @@ const registerForm = new GroupForm({
   },
   onValid: () => {
     console.log('onValid');
-    $('#registerSubmit').removeProp('disabled');
+    $('#registerSubmit').removeAttr('disabled');
   }
 });
