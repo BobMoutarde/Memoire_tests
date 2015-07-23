@@ -1,0 +1,6 @@
+# Ignore node packages
+node_modules/
+# Ignore built files
+js/build/
+# Gulp
+gulpfile.js

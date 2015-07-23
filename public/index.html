@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <!-- Mobile devis -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
+    <link rel="stylesheet" href="css/main.css">
+  </head>
+  <body>
+    <div>
+      <form class="sign-up">
+         <h1 class="sign-up-title">Inscription</h1>
+         <div class="row-form">
+           <!--  sign-up-error -->
+           <input type="text" id="registerName" class="sign-up-input" placeholder="Nom de compte ?" autofocus>
+           <span class="input-error">Lorem ipsum dolor sit amet.</span>
+         </div>
+         <div class="row-form">
+           <input type="password" id="registerPassword" class="sign-up-input" placeholder="Mot de passe">
+           <span class="input-error"></span>
+         </div>
+         <div class="row-form">
+           <input type="text" id="registerEmail" class="sign-up-input" placeholder="Adresse electronique">
+           <span class="input-error">Format non valide</span>
+         </div>
+         <div class="row-form">
+           <input type="submit" id="registerSubmit" value="Enregistrer !" class="sign-up-button" disabled="disabled">
+         </div>
+       </form>
+    </div>
+    <script src="../bower_components/jquery/dist/jquery.min.js" charset="utf-8"></script>
+    <script src="js/Commentaire.js" charset="utf-8"></script>
+  </body>
+</html>

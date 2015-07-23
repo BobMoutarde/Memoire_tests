@@ -1,0 +1,22 @@
+{
+  "name": "memoire_tests",
+  "version": "0.0.1",
+  "description": "config bower",
+  "keywords": [
+    "boilerplate"
+  ],
+  "authors": [
+    "k.bon"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "~2.1.4"
+  }
+}
